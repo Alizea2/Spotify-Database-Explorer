@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genre Rankings</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <%- include('partials/nav') %>
+
+  <main>
+    <header class="page-head">
+      <h1>Genre Rankings</h1>
+      <p class="page-subtitle">Genres that produce the most tracks are NOT the most popular — this page exposes the gap between output volume and actual audience reach.</p>
+    </header>
+
+    <section class="kpi-grid" aria-label="Key metrics">
+      <article class="kpi-card">
+        <span class="kpi-label">Total Genres</span>
+        <span class="kpi-value"><%= totalGenres %></span>
+      </article>
+      <article class="kpi-card">
+        <span class="kpi-label">Total Tracks</span>
+        <span class="kpi-value"><%= totalTracks.toLocaleString() %></span>
+      </article>
+      <article class="kpi-card kpi-accent">
+        <span class="kpi-label">Highest Popularity Genre</span>
+        <span class="kpi-value"><%= highestPopularityGenre.genre_name %></span>
+        <span class="kpi-sub"><%= highestPopularityGenre.avg_popularity %> avg popularity</span>
+      </article>
+      <article class="kpi-card kpi-warn">
+        <span class="kpi-label">Most Overproduced Genre</span>
+        <span class="kpi-value"><%= mostOverproducedGenre.genre_name %></span>
+        <span class="kpi-sub">gap <%= mostOverproducedGenre.rank_inversion_gap %></span>
+      </article>
+    </section>
+
+    <section class="card" aria-label="Genre leaderboard">
+      <div class="table-scroll-box leaderboard-scroll-box">
+        <table class="data-table sortable-table" id="genre-table">
+          <thead>
+            <tr>
+              <th data-sort="rank" data-type="number">#</th>
+              <th data-sort="genre_name" data-type="string">Genre</th>
+              <th data-sort="track_count" data-type="number">Track Count</th>
+              <th data-sort="unique_artists" data-type="number">Unique Artists</th>
+              <th data-sort="avg_popularity" data-type="number">Avg Popularity</th>
+              <th data-sort="size_rank" data-type="number">Size Rank</th>
+              <th data-sort="popularity_rank" data-type="number">Popularity Rank</th>
+              <th data-sort="rank_inversion_gap" data-type="number">Rank Inversion Gap</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% genres.forEach((g, i) => { %>
+              <% const overproduced = g.rank_inversion_gap < -15; %>
+              <% const hiddenGem = g.rank_inversion_gap > 15; %>
+              <tr class="<%= overproduced ? 'row-amber' : '' %> <%= hiddenGem ? 'row-green' : '' %>">
+                <td data-value="<%= i + 1 %>">
+                  <% if (g.popularity_rank === 1) { %><span class="rank-badge rank-gold">1</span>
+                  <% } else if (g.popularity_rank === 2) { %><span class="rank-badge rank-silver">2</span>
+                  <% } else if (g.popularity_rank === 3) { %><span class="rank-badge rank-bronze">3</span>
+                  <% } else { %><%= i + 1 %><% } %>
+                </td>
+                <td data-value="<%= g.genre_name %>"><%= g.genre_name %>
+                  <% if (overproduced) { %><span class="badge badge-amber">&#9888;&#65039; Overproduced</span><% } %>
+                  <% if (hiddenGem) { %><span class="badge badge-green">&#11088; Hidden Gem</span><% } %>
+                </td>
+                <td data-value="<%= g.track_count %>"><%= g.track_count.toLocaleString() %></td>
+                <td data-value="<%= g.unique_artists %>"><%= g.unique_artists.toLocaleString() %></td>
+                <td data-value="<%= g.avg_popularity %>">
+                  <div class="mini-bar-wrap">
+                    <div class="mini-bar"><div class="mini-bar-fill" style="width:<%= Math.round((g.avg_popularity / maxAvgPopularity) * 100) %>%; background: <%= `hsl(${Math.round((g.avg_popularity / maxAvgPopularity) * 120)}, 70%, 50%)` %>"></div></div>
+                    <span class="mini-bar-val"><%= g.avg_popularity %></span>
+                  </div>
+                </td>
+                <td data-value="<%= g.size_rank %>"><%= g.size_rank %></td>
+                <td data-value="<%= g.popularity_rank %>"><%= g.popularity_rank %></td>
+                <td data-value="<%= g.rank_inversion_gap %>" class="<%= g.rank_inversion_gap > 0 ? 'delta-up' : (g.rank_inversion_gap < 0 ? 'delta-down' : 'delta-flat') %>">
+                  <%= g.rank_inversion_gap > 0 ? '+' : '' %><%= g.rank_inversion_gap %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Size rank versus popularity rank slope chart">
+      <h2>Rank Reality Check</h2>
+      <p class="chart-note">How big a genre&#8217;s catalogue is (left) versus how popular it actually is (right). A falling line means lots of tracks nobody really listens to. A climbing line means a small catalogue that overperforms.</p>
+      <div class="svg-wrap slope-wrap" style="--ar-w: <%= slopeWidth %>; --ar-h: <%= slopeHeight %>;">
+        <svg viewBox="0 0 <%= slopeWidth %> <%= slopeHeight %>" preserveAspectRatio="xMidYMid meet">
+          <text x="<%= slopeLeftX %>" y="16" text-anchor="middle" class="slope-col-title">SIZE RANK</text>
+          <text x="<%= slopeRightX %>" y="16" text-anchor="middle" class="slope-col-title">POPULARITY RANK</text>
+
+          <% slopeLines.forEach((l, i) => { %>
+            <line x1="<%= slopeLeftX %>" y1="<%= l.y1 %>" x2="<%= slopeRightX %>" y2="<%= l.y2 %>"
+              class="slope-line slope-line-<%= l.status %>" style="--i: <%= i %>;">
+              <title><%= l.genre_name %> — size rank <%= l.size_rank %> &#8594; popularity rank <%= l.popularity_rank %> (gap <%= l.gap > 0 ? '+' : '' %><%= l.gap %>)</title>
+            </line>
+          <% }) %>
+          <% slopeLines.forEach((l, i) => { %>
+            <circle cx="<%= slopeLeftX %>" cy="<%= l.y1 %>" r="3" class="slope-dot slope-dot-<%= l.status %>" style="--i: <%= i %>;" />
+            <circle cx="<%= slopeRightX %>" cy="<%= l.y2 %>" r="3" class="slope-dot slope-dot-<%= l.status %>" style="--i: <%= i %>;" />
+            <text x="<%= slopeLeftX - 12 %>" y="<%= l.y1 + 3 %>" text-anchor="end" class="slope-rank-num"><%= l.size_rank %></text>
+            <text x="<%= slopeRightX + 14 %>" y="<%= l.y2 + 3 %>" text-anchor="start" class="slope-label slope-label-<%= l.status %>"><%= l.genre_name %></text>
+          <% }) %>
+        </svg>
+      </div>
+      <div class="scatter-legend">
+        <span><span class="legend-dot legend-dot-gem"></span> Hidden Gem &#8212; tiny catalogue, overperforms</span>
+        <span><span class="legend-dot legend-dot-neutral"></span> Balanced</span>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

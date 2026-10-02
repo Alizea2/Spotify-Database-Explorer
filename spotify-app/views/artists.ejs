@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Top Artists</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <%- include('partials/nav') %>
+
+  <main>
+    <header class="page-head">
+      <h1>Top Artists</h1>
+      <p class="page-insight">Ranked by how far each artist outshines others in their <em>own</em> genre &#8212; not by raw popularity. The number on each bar is how many times more extreme than a typical genre artist they are &#8212; taller and brighter means more of an outlier.</p>
+    </header>
+
+    <section class="card">
+      <div class="controls-bar">
+        <label for="genre-filter">Filter by genre</label>
+        <div class="fancy-select-wrap">
+          <select id="genre-filter" class="select-fancy">
+            <option value="">&#10024; Top 20 overall</option>
+            <% genreList.forEach((g) => { %>
+              <option value="<%= g %>"><%= g %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+
+      <div class="equalizer-wrap">
+        <div class="equalizer" id="artist-equalizer"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Collaboration Network</h2>
+      <p class="chart-note">Every artist who&#8217;s teamed up with another on 2+ tracks, arranged in a circle. A thicker line means more shared tracks; a greener line means the collaboration ran more popular. Bigger dots have worked with more different partners.</p>
+      <div class="svg-wrap network-wrap" style="--ar-w: <%= netSize %>; --ar-h: <%= netSize %>;">
+        <svg viewBox="0 0 <%= netSize %> <%= netSize %>" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Artist collaboration network">
+          <% networkEdges.forEach((e, i) => { %>
+            <path d="M <%= e.x1 %> <%= e.y1 %> Q <%= e.cx %> <%= e.cy %> <%= e.x2 %> <%= e.y2 %>"
+              class="network-edge" stroke="<%= e.color %>" stroke-width="<%= e.width %>"
+              style="--i: <%= i %>; --edge-opacity: <%= e.opacity %>;">
+              <title><%= e.artist_1 %> &#8596; <%= e.artist_2 %>: <%= e.shared_tracks %> shared tracks, <%= e.avg_collab_popularity %> avg popularity</title>
+            </path>
+          <% }) %>
+          <% networkNodes.forEach((n, i) => { %>
+            <circle cx="<%= n.x %>" cy="<%= n.y %>" r="<%= n.r %>" class="network-node" style="--i: <%= i %>;">
+              <title><%= n.name %> &#8212; collaborated with <%= n.degree %> other artist<%= n.degree === 1 ? '' : 's' %></title>
+            </circle>
+          <% }) %>
+          <% networkNodes.forEach((n, i) => { %>
+            <text x="<%= n.labelX %>" y="<%= n.labelY %>" text-anchor="<%= n.anchor %>" dominant-baseline="middle"
+              transform="rotate(<%= n.labelRotation %> <%= n.labelX %> <%= n.labelY %>)"
+              class="network-label" style="--i: <%= i %>;"><%= n.name %></text>
+          <% }) %>
+        </svg>
+      </div>
+    </section>
+  </main>
+
+  <script>window.__ARTIST_CONSTELLATION__ = <%- JSON.stringify(constellationData) %>;</script>
+  <script src="app.js"></script>
+</body>
+</html>

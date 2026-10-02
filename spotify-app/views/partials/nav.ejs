@@ -1,0 +1,16 @@
+<header>
+  <nav class="nav">
+    <div class="nav-brand">
+      <span class="nav-logo">&#9835;</span>
+      <span>Spotify DB</span>
+      <span class="nav-logo-eq" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+    </div>
+    <div class="nav-links">
+      <a href="dashboard" class="nav-link <%= activePage === 'dashboard' ? 'active' : '' %>">Genre Rankings</a>
+      <a href="artists" class="nav-link <%= activePage === 'artists' ? 'active' : '' %>">Top Artists</a>
+      <a href="mood-atlas" class="nav-link <%= activePage === 'mood-atlas' ? 'active' : '' %>">Mood Breakdown</a>
+      <a href="album-journey" class="nav-link <%= activePage === 'album-journey' ? 'active' : '' %>">Album Tracks</a>
+      <a href="outliers" class="nav-link <%= activePage === 'outliers' ? 'active' : '' %>">Track Anomalies</a>
+    </div>
+  </nav>
+</header>

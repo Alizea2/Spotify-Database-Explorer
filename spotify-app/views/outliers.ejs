@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Anomalies</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <%- include('partials/nav') %>
+
+  <main>
+    <header class="page-head">
+      <h1>Track Anomalies</h1>
+      <p class="page-subtitle">Some tracks are so statistically impossible within their genre they either represent classification failures or genuine genre-defying art.</p>
+    </header>
+
+    <section class="callout">
+      <span class="callout-label">Anomaly Detection Threshold</span>
+      <span class="callout-value">|Z| &gt; 1.8&sigma;</span>
+      <p class="callout-text">
+        Any track whose energy, valence, danceability, or acousticness sits more than
+        1.8 standard deviations from its genre&#8217;s average gets flagged. <strong><%= totalAnomalies %> tracks</strong>
+        currently qualify, averaging <strong><%= avgAnomalyScore %>&sigma;</strong> combined deviation &#8212; led by <strong><%= mostAnomalousGenre %></strong>.
+      </p>
+    </section>
+
+    <section class="mini-chart-grid">
+      <% dimensionCharts.forEach((dim) => { %>
+        <article class="card mini-chart-card">
+          <h2><%= dim.label %> Anomalies</h2>
+          <p class="chart-note">Tracks whose <%= dim.label.toLowerCase() %> diverges most from their genre&#8217;s norm</p>
+
+          <% if (dim.type === 'dotplot') { %>
+            <div class="svg-wrap dot-wrap" style="--ar-w: <%= dim.width %>; --ar-h: <%= dim.height %>;">
+              <svg viewBox="0 0 <%= dim.width %> <%= dim.height %>" preserveAspectRatio="xMidYMid meet">
+                <line x1="0" y1="<%= dim.baselineY %>" x2="<%= dim.width %>" y2="<%= dim.baselineY %>" class="curve-baseline" />
+                <% dim.top.forEach((row) => { %>
+                  <line x1="<%= row.x %>" y1="<%= dim.baselineY %>" x2="<%= row.x %>" y2="<%= row.y %>" class="dot-stem" style="--i: <%= row.index %>;" />
+                <% }) %>
+                <% dim.top.forEach((row) => { %>
+                  <circle cx="<%= row.x %>" cy="<%= row.y %>" class="dot-halo" style="--color: <%= row.color %>; --i: <%= row.index %>; --halo-r: <%= row.r + 6 %>;" />
+                <% }) %>
+                <% dim.top.forEach((row) => { %>
+                  <circle cx="<%= row.x %>" cy="<%= row.y %>" class="dot-point" style="--color: <%= row.color %>; --i: <%= row.index %>; --r: <%= row.r %>;" />
+                <% }) %>
+                <% dim.top.forEach((row) => { %>
+                  <text x="<%= row.x %>" y="<%= row.y - row.r - 8 %>" text-anchor="middle"
+                    class="dot-score" style="--color: <%= row.color %>; --i: <%= row.index %>;"
+                  ><%= row.value > 0 ? '+' : '' %><%= row.value %></text>
+                <% }) %>
+                <% dim.top.forEach((row) => { %>
+                  <text x="<%= row.x %>" y="<%= dim.labelY %>" text-anchor="end"
+                    class="dot-label"
+                    style="--color: <%= row.color %>; --i: <%= row.index %>; --ox: <%= row.x %>px; --oy: <%= dim.labelY %>px;"
+                  ><%= row.name %></text>
+                <% }) %>
+              </svg>
+            </div>
+          <% } %>
+
+          <% if (dim.type === 'line') { %>
+            <div class="svg-wrap curve-wrap" style="--ar-w: <%= dim.width %>; --ar-h: <%= dim.height %>;">
+              <svg viewBox="0 0 <%= dim.width %> <%= dim.height %>" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                  <linearGradient id="lineStrokeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <% dim.top.forEach((row, i) => { %>
+                      <stop offset="<%= Math.round(i / (dim.top.length - 1 || 1) * 100) %>%" style="stop-color: <%= row.color %>;" />
+                    <% }) %>
+                  </linearGradient>
+                </defs>
+                <line x1="0" y1="<%= dim.baselineY %>" x2="<%= dim.width %>" y2="<%= dim.baselineY %>" class="curve-baseline" />
+                <path d="<%= dim.linePath %>" class="curve-line" stroke="url(#lineStrokeGradient)" />
+                <% dim.top.forEach((row) => { %>
+                  <circle cx="<%= row.x %>" cy="<%= row.y %>" class="curve-dot" style="--color: <%= row.color %>; --i: <%= row.index %>;" />
+                <% }) %>
+                <% dim.top.forEach((row) => { %>
+                  <text x="<%= row.x %>" y="<%= row.value >= 0 ? row.y - 12 : row.y + 18 %>" text-anchor="middle"
+                    class="dot-score" style="--color: <%= row.color %>; --i: <%= row.index %>;"
+                  ><%= row.value > 0 ? '+' : '' %><%= row.value %></text>
+                <% }) %>
+                <% dim.top.forEach((row) => { %>
+                  <text x="<%= row.x %>" y="<%= dim.labelY %>" text-anchor="end"
+                    class="dot-label"
+                    style="--color: <%= row.color %>; --i: <%= row.index %>; --ox: <%= row.x %>px; --oy: <%= dim.labelY %>px;"
+                  ><%= row.name %></text>
+                <% }) %>
+              </svg>
+            </div>
+          <% } %>
+
+          <% if (dim.type === 'sunburst') { %>
+            <div class="radial-multi-layout">
+              <svg viewBox="0 0 <%= sunSize %> <%= sunSize %>" class="sun-svg">
+                <% dim.top.forEach((row) => { %>
+                  <line x1="<%= row.x1 %>" y1="<%= row.y1 %>" x2="<%= row.x2 %>" y2="<%= row.y2 %>"
+                    class="sun-ray" stroke-width="<%= sunStroke %>"
+                    style="--color: <%= row.color %>; --i: <%= row.index %>; --ray-len: <%= row.length %>;" />
+                <% }) %>
+                <circle cx="<%= sunCenter %>" cy="<%= sunCenter %>" r="<%= sunInnerR + 4 %>" class="sun-center-disc" />
+              </svg>
+              <ul class="radial-multi-legend">
+                <% dim.top.forEach((row) => { %>
+                  <li>
+                    <span class="legend-dot" style="background: <%= row.color %>; box-shadow: 0 0 6px <%= row.color %>;"></span>
+                    <span class="legend-name" title="<%= row.name %> — <%= row.genre %>"><%= row.name %></span>
+                    <span class="legend-value"><%= row.value > 0 ? '+' : '' %><%= row.value %></span>
+                  </li>
+                <% }) %>
+              </ul>
+            </div>
+          <% } %>
+
+          <% if (dim.type === 'nightingale') { %>
+            <div class="radial-multi-layout">
+              <svg viewBox="0 0 <%= roseSize %> <%= roseSize %>" class="rose-svg">
+                <circle cx="<%= roseCenter %>" cy="<%= roseCenter %>" r="<%= roseCenter - 5 %>" class="rose-guide" />
+                <% dim.top.forEach((row) => { %>
+                  <path d="<%= row.path %>" class="rose-wedge" style="--color: <%= row.color %>; --i: <%= row.index %>;" />
+                <% }) %>
+              </svg>
+              <ul class="radial-multi-legend">
+                <% dim.top.forEach((row) => { %>
+                  <li>
+                    <span class="legend-dot" style="background: <%= row.color %>; box-shadow: 0 0 6px <%= row.color %>;"></span>
+                    <span class="legend-name" title="<%= row.name %> — <%= row.genre %>"><%= row.name %></span>
+                    <span class="legend-value"><%= row.value > 0 ? '+' : '' %><%= row.value %></span>
+                  </li>
+                <% }) %>
+              </ul>
+            </div>
+          <% } %>
+        </article>
+      <% }) %>
+    </section>
+
+    <section class="card">
+      <h2>All Flagged Tracks</h2>
+      <div class="table-scroll-box">
+        <table class="data-table sortable-table" id="outlier-table">
+          <thead>
+            <tr>
+              <th data-sort="track_name" data-type="string">Track</th>
+              <th data-sort="genre_name" data-type="string">Genre</th>
+              <th data-sort="mood_name" data-type="string">Mood</th>
+              <th data-sort="total_anomaly_score" data-type="number">Total Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% tracks.forEach((t) => { %>
+              <tr>
+                <td data-value="<%= t.track_name %>" title="<%= t.explanation %>">
+                  <%= t.track_name %>
+                  <% if (t.moodMismatch) { %><span class="mismatch-flag" title="Mood label contradicts valence">&#9888;&#65039;</span><% } %>
+                </td>
+                <td data-value="<%= t.genre_name %>"><%= t.genre_name %></td>
+                <td data-value="<%= t.mood_name %>"><%= t.mood_name %></td>
+                <td data-value="<%= t.total_anomaly_score %>"><%= t.total_anomaly_score %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+pandas
+mysql-connector-python
+kagglehub
+numpy
+matplotlib
+python-docx

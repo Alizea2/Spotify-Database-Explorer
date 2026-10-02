@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mood Breakdown</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <%- include('partials/nav') %>
+
+  <main>
+    <header class="page-head">
+      <h1>Mood Breakdown</h1>
+      <p class="page-subtitle">Mood labels on music are lies told by algorithms. When you compute the actual sonic fingerprint of each mood, contradictions appear everywhere.</p>
+    </header>
+
+    <section class="controls-bar">
+      <button id="baseline-toggle" type="button">Compare against global baseline</button>
+      <span class="legend">
+        <span class="legend-swatch legend-actual"></span> Mood shape
+        <span class="legend-swatch legend-baseline"></span> Global baseline
+      </span>
+    </section>
+
+    <section class="mood-grid">
+      <% moods.forEach((m) => { %>
+        <article class="mood-panel">
+          <div class="mood-panel-head">
+            <h2><%= m.mood_name %></h2>
+            <span class="mood-track-count"><%= m.totalTracks.toLocaleString() %> tracks</span>
+          </div>
+
+          <% if (m.paradox) { %>
+            <div class="paradox-banner">Sonic Paradox Detected</div>
+          <% } %>
+
+          <svg viewBox="0 0 260 260" class="radar-svg" role="img" aria-label="Radar chart of <%= m.mood_name %> audio features">
+            <% m.radar.axisLines.forEach((line) => { %>
+              <line x1="<%= line.x1 %>" y1="<%= line.y1 %>" x2="<%= line.x2 %>" y2="<%= line.y2 %>" class="radar-axis" />
+            <% }) %>
+            <polygon points="<%= globalBaselineRadar.polygon %>" class="radar-polygon baseline-polygon hidden" />
+            <polygon points="<%= m.radar.polygon %>" class="radar-polygon actual-polygon" />
+            <% m.radar.labelPoints.forEach((p) => { %>
+              <text x="<%= p.x %>" y="<%= p.y %>" class="radar-label" text-anchor="middle"><%= p.label %></text>
+            <% }) %>
+          </svg>
+
+          <div class="tag-row">
+            <% m.topGenres.forEach((g) => { %>
+              <span class="tag-pill"><%= g.genre_name %></span>
+            <% }) %>
+          </div>
+        </article>
+      <% }) %>
+    </section>
+
+    <section class="card">
+      <h2>Popularity Breakdown</h2>
+      <p class="chart-note">The 12 biggest genres, broken down by mood. Wider columns have more tracks; taller blocks are a bigger share of that genre. Green blocks are more popular, red blocks are less.</p>
+      <div class="svg-wrap treemap-wrap" style="--ar-w: <%= treemapWidth %>; --ar-h: <%= treemapTotalHeight %>;">
+        <svg viewBox="0 0 <%= treemapWidth %> <%= treemapTotalHeight %>" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Genre and mood popularity treemap">
+          <% treemapColumns.forEach((col, ci) => { %>
+            <% col.cells.forEach((cell, i) => { %>
+              <rect x="<%= cell.x %>" y="<%= cell.y %>" width="<%= cell.width %>" height="<%= cell.height %>"
+                class="treemap-cell" fill="<%= cell.color %>" style="--i: <%= ci * 10 + i %>;">
+                <title><%= col.genre %> &#8212; <%= cell.mood %>: <%= cell.track_count.toLocaleString() %> tracks, <%= cell.avg_popularity %> avg popularity</title>
+              </rect>
+              <% if (cell.width > 46 && cell.height > 18) { %>
+                <text x="<%= cell.x + cell.width / 2 %>" y="<%= cell.y + cell.height / 2 - 3 %>" text-anchor="middle"
+                  class="treemap-mood-label" style="--i: <%= ci * 10 + i %>;"><%= cell.mood %></text>
+                <text x="<%= cell.x + cell.width / 2 %>" y="<%= cell.y + cell.height / 2 + 11 %>" text-anchor="middle"
+                  class="treemap-pop-label" style="--i: <%= ci * 10 + i %>;"><%= cell.avg_popularity %></text>
+              <% } %>
+            <% }) %>
+          <% }) %>
+          <% treemapColumns.forEach((col) => { %>
+            <text x="<%= col.x + col.width / 2 %>" y="<%= treemapHeight + 18 %>" text-anchor="middle"
+              class="treemap-genre-label"><%= col.genre %></text>
+          <% }) %>
+        </svg>
+      </div>
+      <div class="treemap-scale">
+        <span>Less popular</span>
+        <span class="treemap-scale-bar"></span>
+        <span>More popular</span>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Album Tracks</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <%- include('partials/nav') %>
+
+  <main>
+    <header class="page-head">
+      <h1>Album Tracks</h1>
+      <p class="page-subtitle">Albums are engineered emotional arcs — the opening track hooks, the middle breathes, the closer lands. Does the popularity arc follow a deliberate structure?</p>
+    </header>
+
+    <form class="controls-bar" method="GET" action="album-journey">
+      <label for="album_id">Album</label>
+      <div class="fancy-select-wrap">
+        <select id="album_id" name="album_id" class="select-fancy" onchange="this.form.submit()">
+          <% albumOptions.forEach((a) => { %>
+            <option value="<%= a.album_id %>" <%= a.album_id === albumId ? 'selected' : '' %>><%= a.album_name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <button type="submit">Load Album</button>
+    </form>
+
+    <% if (!tracks.length) { %>
+      <section class="card">
+        <div class="empty-state">No tracks found for this album. Try a different album.</div>
+      </section>
+    <% } else { %>
+      <section class="card">
+        <h2><%= albumName %></h2>
+        <p class="chart-note">Dashed line marks the album&#8217;s average popularity (<%= albumAvgPopularity %>)</p>
+
+        <div class="svg-wrap" style="--ar-w: <%= svgWidth %>; --ar-h: <%= svgHeight %>;">
+          <svg viewBox="0 0 <%= svgWidth %> <%= svgHeight %>" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Album popularity timeline">
+            <line x1="<%= marginX %>" y1="<%= baselineY %>" x2="<%= svgWidth - marginX %>" y2="<%= baselineY %>" class="timeline-baseline" />
+            <line x1="0" y1="<%= dashedY %>" x2="<%= svgWidth %>" y2="<%= dashedY %>" class="timeline-avg-line" stroke-dasharray="6,6" />
+            <% tracks.forEach((t) => { %>
+              <rect x="<%= t.barX %>" y="<%= t.barY %>" width="<%= t.barWidth %>" height="<%= t.barHeight %>" class="energy-bar" />
+            <% }) %>
+            <polyline points="<%= polylinePoints %>" class="arc-polyline" />
+            <% tracks.forEach((t) => { %>
+              <circle cx="<%= t.cx %>" cy="<%= t.cy %>" r="<%= t.r %>" fill="<%= t.color %>" class="track-circle" />
+            <% }) %>
+          </svg>
+
+          <% tracks.forEach((t) => { %>
+            <div class="hit-target" style="
+              left: <%= ((t.cx - t.r) / svgWidth * 100).toFixed(2) %>%;
+              top: <%= ((t.cy - t.r) / svgHeight * 100).toFixed(2) %>%;
+              width: <%= (t.r * 2 / svgWidth * 100).toFixed(2) %>%;
+              height: <%= (t.r * 2 / svgHeight * 100).toFixed(2) %>%;
+            ">
+              <div class="tooltip">
+                <strong><%= t.track_name %></strong>
+                <span class="<%= t.popularity_delta > 0 ? 'delta-up' : (t.popularity_delta < 0 ? 'delta-down' : 'delta-flat') %>">
+                  <%= t.popularity_delta > 0 ? '▲' : (t.popularity_delta < 0 ? '▼' : '—') %> <%= t.popularity_delta %>
+                </span>
+                <span>Mood: <%= t.mood_name || 'N/A' %></span>
+                <span>Key: <%= t.key_name || 'N/A' %></span>
+                <span><%= t.duration_min %> min</span>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </section>
+
+      <section class="card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Position</th><th>Track Name</th><th>Popularity</th><th>Delta</th>
+              <th>Energy</th><th>Valence</th><th>Mood</th><th>Key</th><th>Performance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% tracks.forEach((t) => { %>
+              <tr class="row-<%= t.performance_label.toLowerCase() %>">
+                <td><%= t.track_position %></td>
+                <td><%= t.track_name %></td>
+                <td><%= t.popularity %></td>
+                <td class="<%= t.popularity_delta > 0 ? 'delta-up' : (t.popularity_delta < 0 ? 'delta-down' : 'delta-flat') %>">
+                  <%= t.popularity_delta > 0 ? '+' : '' %><%= t.popularity_delta %>
+                </td>
+                <td><%= t.energy %></td>
+                <td><%= t.valence %></td>
+                <td><%= t.mood_name || 'N/A' %></td>
+                <td><%= t.key_name || 'N/A' %></td>
+                <td class="perf-<%= t.performance_label.toLowerCase() %>"><%= t.performance_label %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>Genre-Beating Tracks</h2>
+        <p class="chart-note">The table above only compares tracks to <em>this album&#8217;s</em> average. This asks a bigger question: which of these tracks beat their entire genre&#8217;s average popularity by 20+ points? Grey dot is the genre&#8217;s average; the line flies out to the track&#8217;s actual popularity.</p>
+        <% if (!dumbbellRows.length) { %>
+          <div class="empty-state">No track on this album beats its genre average by 20+ points.</div>
+        <% } else { %>
+          <div class="svg-wrap dumbbell-wrap" style="--ar-w: <%= dumbbellWidth %>; --ar-h: <%= dumbbellHeight %>;">
+            <svg viewBox="0 0 <%= dumbbellWidth %> <%= dumbbellHeight %>" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Track popularity versus genre average">
+              <% dumbbellRows.forEach((g, i) => { %>
+                <text x="<%= dumbbellMarginLeft - 14 %>" y="<%= g.y + 3 %>" text-anchor="end" class="dumbbell-label" style="--i: <%= i %>;"><%= g.track_name %></text>
+                <line x1="<%= g.x1 %>" y1="<%= g.y %>" x2="<%= g.x2 %>" y2="<%= g.y %>" class="dumbbell-line" style="--i: <%= i %>;" />
+                <circle cx="<%= g.x1 %>" cy="<%= g.y %>" r="4" class="dumbbell-dot dumbbell-dot-avg" style="--i: <%= i %>;">
+                  <title><%= g.genre_name %> average popularity: <%= g.genre_avg_popularity %></title>
+                </circle>
+                <circle cx="<%= g.x2 %>" cy="<%= g.y %>" r="5.5" class="dumbbell-dot dumbbell-dot-track" style="--i: <%= i %>;">
+                  <title><%= g.track_name %>: <%= g.popularity %> popularity, +<%= g.above_genre_avg %> above <%= g.genre_name %> average</title>
+                </circle>
+                <text x="<%= g.x2 + 12 %>" y="<%= g.y + 3 %>" class="dumbbell-delta" style="--i: <%= i %>;">+<%= g.above_genre_avg %></text>
+              <% }) %>
+            </svg>
+          </div>
+          <div class="scatter-legend">
+            <span><span class="legend-dot dumbbell-legend-avg"></span> Genre average popularity</span>
+            <span><span class="legend-dot dumbbell-legend-track"></span> This track&#8217;s popularity</span>
+          </div>
+        <% } %>
+      </section>
+    <% } %>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
